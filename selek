@@ -12,7 +12,7 @@ dc_list='42\n84\n96\n208\nae1\nuw2-pub-1\nuw2-edt-1'
 namespaces_list='tb-viewer\nsite-assets\nviewer-server' 
 
 
-dc=$(printf $dc_list | fzf --sync --height 10 --header "Select DC:")
+dc=$(printf $dc_list | fzf --color 16 --sync --height 10 --prompt "Select DC: ")
 
 if [ -z "$dc" ]; then
   echo "No DC selected"
@@ -21,7 +21,7 @@ fi
 
 kubectl config use-context $dc
 
-namespace=$(printf $namespaces_list | fzf --sync --height 10 --header "Select namespace:")
+namespace=$(printf $namespaces_list | fzf --color 16 --sync --height 10 --prompt "Select namespace: ")
 if [ -z "$namespace" ]; then
   echo "No namespace selected"
   exit 0 
@@ -29,10 +29,18 @@ fi
 
 describe_cmd="echo '{1}"
 
-pod_name=$(kubectl get pods -n $namespace \
+header=$'↑/↓ - Select, <Shift>+↑/↓ - Scroll describe\n<Tab> - Toggle describe\n<Enter> - SSH to the pod\n<Esc> - Cancel'
+
+pod_name=$(kubectl get pods -o wide -L version -n $namespace \
              | fzf --header-lines 1 \
                 --ansi --exact \
-                --header $'↑/↓ - Select\n<Enter> - ssh to the pod\n<Esc> - Cancel' \
+                --reverse \
+                --prompt "Select pod: " \
+                --header "$header" \
+                --bind='tab:toggle-preview' \
+                --preview-window down \
+                --border rounded \
+                --color 16,border:#333333,preview-fg:#32afff \
                 --preview "kubectl describe pod -n $namespace {1}" \
                     | cut -d\  -f 1)
 

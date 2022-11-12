@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+# !/usr/bin/env bash
+
 openGithubCommitOnRemote() {
   read commit
     
@@ -9,12 +10,11 @@ openGithubCommitOnRemote() {
   fi
 }
 
-format='%Cred%h%Creset %Cgreen%<(13)%cr%Creset %C(bold blue)%<(16)%an%Creset %s %C(auto)%d%Creset' 
-
-
-if [[ $1 -e "-m"]]; then
-	echo 'yes'
-fi
-
-git log origin/$(git_main_branch) --decorate-refs-exclude=refs/tags --pretty=format:"${format}" --abbrev-commit | fzf --ansi --no-sort --exact --preview 'git show {1} | delta' | awk '{print $1}' | tr -d '\n' | openGithubCommitOnRemote
-
+git log origin/main  \
+  --decorate-refs-exclude=refs/tags --abbrev-commit \
+  --pretty=format:'%Cred%h%Creset %Cgreen%<(13)%cr%Creset %C(bold blue)%<(16)%an%Creset %s %C(auto)%d%Creset' \
+  | fzf --ansi --no-sort --exact \
+       --bind='tab:toggle-preview' \
+       --preview 'git show {1} | delta' \
+          | cut -d\  -f 1 \
+          | openGithubCommitOnRemote
