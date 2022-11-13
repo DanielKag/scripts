@@ -7,9 +7,7 @@ echo "| |/ / | | | '_ \\ / _ \\   / __|/ _ \\ |/ _ \\ |/ /"
 echo "|   <| |_| | |_) |  __/   \\__ \\  __/ |  __/   < "
 echo "|_|\\_\\\\__,_|_.__/ \___|   |___/\\___|_|\\___|_|\\_\\ v1.4"
 
-parsecontext() {
-  echo $1 | tr -s ' ' | cut -d ' ' -f 2  
-}
+FZF_DEFAULT_OPTS='--bind esc:abort --reverse'
 
 usecontext() {
   context=$(parsecontexta $1)
@@ -54,7 +52,6 @@ header=$'↑/↓ - Select, <Shift>+↑/↓ - Scroll describe\n<Tab> - Toggle des
 pod_name=$(kubectl get pods -o wide -L version -n $namespace --context $dc \
              | fzf --header-lines 1 \
                 --ansi --exact \
-                --reverse \
                 --prompt "Select pod: " \
                 --header "$header" \
                 --bind='tab:toggle-preview' \
