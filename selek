@@ -39,13 +39,14 @@ pod_name=$(kubectl get pods -o wide -L version -n $namespace \
                 --header "$header" \
                 --bind='tab:toggle-preview' \
                 --preview-window down \
+                --preview-window hidden \
                 --border rounded \
                 --color 16,border:#333333,preview-fg:#32afff \
                 --preview "kubectl describe pod -n $namespace {1}" \
                     | cut -d\  -f 1)
 
 if [ -n "$pod_name" ]; then
-  kubectl exec -it -n tb-viewer $pod_name -- bash
+  kubectl exec -it -n $namespace $pod_name -- bash
 fi
 
 
