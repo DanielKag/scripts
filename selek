@@ -22,12 +22,12 @@ dc_list='42\n84\n96\n208\nae1\nuw2-pub-1\nuw2-edt-1'
 namespaces_list='tb-viewer\nsite-assets\nviewer-server' 
 
 
-dc=$(kubectl config get-contexts | sort -r \
+dc=$(kubectl config get-contexts \
       | fzf --color 16 --height 10 \
             --header-lines 1 \
-            --bind "tab:execute(kubectl config use-context {1} > null)" \
-            --bind "tab:+reload(kubectl config get-contexts | sort -r)" \
-            --bind "tab:+first" \
+            --tiebreak begin \
+            --bind "tab:execute(kubectl config use-context {1} &>/dev/null)" \
+            --bind "tab:+reload(kubectl config get-contexts)" \
             --header $'<Tab> - Use context' \
             --prompt "Select DC: " \
                 | tr -s ' ' | cut -d ' ' -f 2)
