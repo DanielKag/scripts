@@ -5,21 +5,39 @@ echo "| |        | |                     | |    | |   "
 echo "| | ___   _| |__   ___     ___  ___| | ___| | __"
 echo "| |/ / | | | '_ \\ / _ \\   / __|/ _ \\ |/ _ \\ |/ /"
 echo "|   <| |_| | |_) |  __/   \\__ \\  __/ |  __/   < "
-echo "|_|\\_\\\\__,_|_.__/ \___|   |___/\\___|_|\\___|_|\\_\\"
+echo "|_|\\_\\\\__,_|_.__/ \___|   |___/\\___|_|\\___|_|\\_\\ v1.2"
+
+parsecontext() {
+  echo $1 | tr -s ' ' | cut -d ' ' -f 2  
+}
+
+usecontext() {
+  context=$(parsecontexta $1)
+  echo 'kubectl config use-context $context'
+ 
+}
 
 # Move to config file
 dc_list='42\n84\n96\n208\nae1\nuw2-pub-1\nuw2-edt-1' 
 namespaces_list='tb-viewer\nsite-assets\nviewer-server' 
 
 
-dc=$(printf $dc_list | fzf --color 16 --sync --height 10 --prompt "Select DC: ")
+dc=$(kubectl config get-contexts | sort -r \
+      | fzf --color 16 --height 10 \
+            --header-lines 1 \
+            --bind "tab:execute(kubectl config use-context {1} > null)" \
+            --bind "tab:+reload(kubectl config get-contexts | sort -r)" \
+            --bind "tab:+first" \
+            --header $'<Tab> - Use context' \
+            --prompt "Select DC: " \
+                | tr -s ' ' | cut -d ' ' -f 2)
+
 
 if [ -z "$dc" ]; then
   echo "No DC selected"
   exit 0
 fi
 
-kubectl config use-context $dc
 
 namespace=$(printf $namespaces_list | fzf --color 16 --sync --height 10 --prompt "Select namespace: ")
 if [ -z "$namespace" ]; then
@@ -31,7 +49,7 @@ describe_cmd="echo '{1}"
 
 header=$'↑/↓ - Select, <Shift>+↑/↓ - Scroll describe\n<Tab> - Toggle describe\n<Enter> - SSH to the pod\n<Esc> - Cancel'
 
-pod_name=$(kubectl get pods -o wide -L version -n $namespace \
+pod_name=$(kubectl get pods -o wide -L version -n $namespace --context $dc \
              | fzf --header-lines 1 \
                 --ansi --exact \
                 --reverse \
