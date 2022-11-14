@@ -1,20 +1,38 @@
 # !/usr/bin/env bash
-
+# git@github.com:wix-private/thunderbolt.git
+# https://github.com/DanielKag/TestReducer.git
 openGithubCommitOnRemote() {
+  base_url=$(git config --get remote.origin.url )
+  base_url="${base_url/.git/}"
+
+  if  [[ $base_url=~^git@.* ]] ; then
+    base_url="${base_url/com:/com/}"
+    base_url="${base_url/git@/http://}"
+  fi
+  
   read commit
-    
-	if [ ! -z "$commit" ]; then
+  
+  if [ ! -z "$commit" ]; then
     owner="wix-private"
     repo=$(basename `git rev-parse --show-toplevel`)
-    open -a "Google Chrome" "https://github.com/$owner/$repo/commit/$commit"
+    echo "################"
+    echo "$base_url"
+    echo "################"
+    open -a "Google Chrome" "$base_url/commit/$commit"
   fi
 }
 
-git log origin/main  \
+base_branch=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
+remote_base_branch="origin/$base_branch"
+
+branch_to_check="$remote_base_branch"
+
+git log $branch_to_check \
   --decorate-refs-exclude=refs/tags --abbrev-commit \
   --pretty=format:'%Cred%h%Creset %Cgreen%<(13)%cr%Creset %C(bold blue)%<(16)%an%Creset %s %C(auto)%d%Creset' \
   | fzf --ansi --no-sort --exact \
        --bind='tab:toggle-preview' \
+       --preview-window down \
        --preview 'git show {1} | delta' \
           | cut -d\  -f 1 \
           | openGithubCommitOnRemote
