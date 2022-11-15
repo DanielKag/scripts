@@ -22,17 +22,28 @@ openGithubCommitOnRemote() {
   fi
 }
 
+
+
 base_branch=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
 remote_base_branch="origin/$base_branch"
 
-branch_to_check="$remote_base_branch"
 
-git log $branch_to_check \
-  --decorate-refs-exclude=refs/tags --abbrev-commit \
-  --pretty=format:'%Cred%h%Creset %Cgreen%<(13)%cr%Creset %C(bold blue)%<(16)%an%Creset %s %C(auto)%d%Creset' \
+branch_to_check=$(echo "HEAD\n$remote_base_branch" | fzf)
+
+command="git log $branch_to_check \
+            --decorate-refs-exclude=refs/tags --abbrev-commit \
+            --pretty=format:'%Cred%h%Creset %Cgreen%<(13)%cr%Creset %C(bold blue)%<(16)%an%Creset %s %C(auto)%d%Creset'"
+
+header=$'Git log in branch: $branch_to_check\n<Tab> - Toggle commit details\n<Enter> - See commit in github\n<Ctrl-r> - Refresh'
+
+eval "$command" \
   | fzf --ansi --no-sort --exact \
+       --header "$header" \
+       --reverse \
        --bind='tab:toggle-preview' \
+       --bind "ctrl-r:+reload(git fetch && $command)" \
        --preview-window down \
+       --preview-window hidden \
        --preview 'git show {1} | delta' \
           | cut -d\  -f 1 \
           | openGithubCommitOnRemote
