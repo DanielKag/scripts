@@ -28,7 +28,7 @@ base_branch=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/o
 remote_base_branch="origin/$base_branch"
 
 
-branch_to_check=$(echo "HEAD\n$remote_base_branch" | fzf)
+branch_to_check=$(printf "HEAD\n$remote_base_branch" | fzf)
 
 command="git log $branch_to_check \
             --decorate-refs-exclude=refs/tags --abbrev-commit \
