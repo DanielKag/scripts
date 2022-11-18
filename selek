@@ -120,6 +120,7 @@ selek_run_command() {
   case $command in
     ssh)
       selek_ssh
+      stay_in_selek=false
       ;;
     copy)
       selek_copy $pod_name
@@ -141,13 +142,23 @@ selek_run_command() {
 
 fzf_commands() {
   commands_header=$"Context: $context | Namespace: $namespace | Pod: $pod_name"
-  fzf --ansi --exact --header "$commands_header" | cut -d\  -f 1 
+  fzf --ansi --exact --header "$commands_header" 
 }
 
-if [ -n "$pod_name" ]; then
-  command=$(print_commands| fzf_commands)
-  selek_run_command $command 
-fi
+export stay_in_selek=true
+while [ $stay_in_selek = true ]
+do
+  if [ -n "$pod_name" ]; then
+        command=$(print_commands| fzf_commands)
+
+        if [ -z "$command" ]; then
+          exit 0
+        fi
+
+        selek_run_command $command 
+  fi
+done
+
 
   
 
