@@ -1,8 +1,21 @@
 # !/bin/sh
-export context="42"
+# export context="42"
 # namespace="tb-viewer"
-pod_name="thunderbolt-deploy-preview-ga-machine-node16-76f4d754c5-p666c"
+# pod_name="thunderbolt-deploy-preview-amiry-884bcf599-tbpk4"
 
+DARK_GRAY="${DARK_GRAY:-$(tput setaf 0)}"
+RED="${RED:-$(tput setaf 1)}"
+GREEN="${GREEN:-$(tput setaf 2)}"
+YELLOW="${YELLOW:-$(tput setaf 3)}"
+BLUE="${BLUE:-$(tput setaf 4)}"
+MAGENTA="${MAGENTA:-$(tput setaf 5)}"
+CYAN="${CYAN:-$(tput setaf 6)}"
+WHITE="${WHITE:-$(tput setaf 7)}"
+GRAY="${GRAY:-$(tput setaf 8)}"
+BOLD="${BOLD:-$(tput bold)}"
+UNDERLINE="${UNDERLINE:-$(tput sgr 0 1)}"
+INVERT="${INVERT:-$(tput sgr 1 0)}"
+NORMAL="${NORMAL:-$(tput sgr0)}"
 
 selek_title() {
   echo " _          _                       _      _    "
@@ -30,14 +43,29 @@ select_context() {
               | tr -s ' ' | cut -d ' ' -f 2
 }
 
+get_state_text() {
+    title="${MAGENTA}${BOLD}"
+    text="${MAGENTA}"
+    
+    namespace_text="${title}Namespace:${NORMAL} ${text}$namespace${NORMAL}"
+    pod_name_text="${title}Pod:${NORMAL} ${text}$pod_name${NORMAL}"
+    printf "${title}Context:${NORMAL} ${text}$context${NORMAL}
+${namespace:+$namespace_text}
+${pod_name:+$pod_name_text}"
+}
+
 select_namespace() {
     load_more_txt="Load more..."
+    header="$(get_state_text)"
+
     choosen_namespace=$(printf "$namespaces_list\n$load_more_txt" \
-        | fzf --prompt "Select namespace: ")
+        | fzf --prompt "Select namespace: " \
+              --header "$header")
         
         if [[ "$choosen_namespace" == "$load_more_txt" ]]; then
           choosen_namespace=$(kubectl get ns -o name --context $context | cut -d/ -f2 \
-              | fzf --prompt "Select namespace: ")
+              | fzf --prompt "Select namespace: " \
+                    --header "$header")
         fi
         
         echo "$choosen_namespace"
@@ -45,7 +73,9 @@ select_namespace() {
 }
 
 select_pod() {
-  header=$'<Enter> - Go to options | <Tab> - Toggle describe'
+  state_text=$(get_state_text)
+  header="<Enter> - Go to options | <Tab> - Toggle describe
+${state_text}"
   kubectl get pods -o wide -L version -n $namespace --context $context 2>&1 \
       | fzf --header-lines 1 \
       --exact \
@@ -89,15 +119,20 @@ selek_ssh() {
   fi
 }
 
+
 selek_logs() {
-  header=$'F - First | L - Last | <Tab> - Select | A - Select all'
-  preview_command="printf {} | jq -C 2> /dev/null || echo {} | fold -s"
-# preview_command="printf {} | jq | grep --color=always -E '{q}|$'"
- 
   extra_args="$1"
-  kubectl --context $context logs -n $namespace $pod_name $extra_args 2>&1 \
+  # preview_command="printf {} | jq | grep --color=always -E '{q}|$'"
+  kube_logs_command="kubectl --context $context logs -n $namespace $pod_name $extra_args"
+  # header=''"'${GRAY}F - First | L - Last | <Tab> - Select | A - Select all\n $kube_logs_command'
+  preview_command="printf {} | jq -C 2> /dev/null || echo {} | fold -s"
+
+  header="${GRAY}F - First | L - Last | <Enter> - Copy | <Tab> - Select | A - Select all${NORMAL}
+$(get_state_text)"
+  eval $kube_logs_command  2>&1 \
       | sed 's/%/$/g' \
       | fzf --bind 'L:last',F:first,A:select-all \
+            --bind "enter:execute(printf {} | pbcopy)" \
             --exact \
             --multi \
             --preview "$preview_command" \
@@ -117,7 +152,7 @@ menu_item() {
 print_commands() {
   menu_item 'ssh' 'SSH to the machine' 
   menu_item 'logs' 'Get machine logs' 
-  menu_item 'logs-to-file' 'Get machine logs and save them in logs.txt' 
+  # menu_item 'logs-to-file' 'Get machine logs and save them in logs.txt' 
   menu_item 'previous-logs' 'logs to the previous pod' 
   menu_item 'copy' 'Copy pod name' 
 }
@@ -148,8 +183,9 @@ selek_run_command() {
   esac
 }
 
+
 fzf_commands() {
-  commands_header=$"Context: $context | Namespace: $namespace | Pod: $pod_name"
+  commands_header="$(get_state_text)"
   fzf --ansi --exact --header "$commands_header" 
 }
 
@@ -166,10 +202,3 @@ do
         selek_run_command $command 
   fi
 done
-
-
-  
-
-
-
-
