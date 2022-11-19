@@ -1,6 +1,6 @@
 # !/bin/sh
-context="42"
-namespace="tb-viewer"
+export context="42"
+# namespace="tb-viewer"
 pod_name="thunderbolt-deploy-preview-ga-machine-node16-76f4d754c5-p666c"
 
 
@@ -18,7 +18,7 @@ title=$(selek_title)
 export FZF_DEFAULT_OPTS='--bind esc:abort --layout reverse --ansi --separator=╸ --color=dark,separator:green,border:white --border rounded'
 
 # Move to config file
-namespaces_list='tb-viewer\nsite-assets\nviewer-server\nci' 
+export namespaces_list='tb-viewer\nsite-assets\nviewer-server\nci' 
 
 select_context() {
   kubectl config get-contexts | sort -r 2>&1 \
@@ -31,8 +31,16 @@ select_context() {
 }
 
 select_namespace() {
-    printf $namespaces_list | fzf --bind "tab:+reload(kubectl get ns -o name --context $context | cut -d/ -f2)" \
-              --prompt "Select namespace: "
+    load_more_txt="Load more..."
+    choosen_namespace=$(printf "$namespaces_list\n$load_more_txt" \
+        | fzf --prompt "Select namespace: ")
+        
+        if [[ "$choosen_namespace" == "$load_more_txt" ]]; then
+          choosen_namespace=$(kubectl get ns -o name --context $context | cut -d/ -f2 \
+              | fzf --prompt "Select namespace: ")
+        fi
+        
+        echo "$choosen_namespace"
 
 }
 
