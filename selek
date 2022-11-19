@@ -3,6 +3,19 @@
 # namespace="tb-viewer"
 # pod_name="thunderbolt-deploy-preview-amiry-884bcf599-tbpk4"
 
+# while getopts u:a:f: flag
+# do
+#     case "${flag}" in
+#         u) username=${OPTARG};;
+#         a) age=${OPTARG};;
+#         f) fullname=${OPTARG};;
+#     esac
+# done
+# echo "Username: $username";
+# echo "Age: $age";
+# echo "Full Name: $fullname";
+
+
 DARK_GRAY="${DARK_GRAY:-$(tput setaf 0)}"
 RED="${RED:-$(tput setaf 1)}"
 GREEN="${GREEN:-$(tput setaf 2)}"
@@ -23,12 +36,22 @@ selek_title() {
   echo "| | ___   _| |__   ___     ___  ___| | ___| | __"
   echo "| |/ / | | | '_ \\ / _ \\   / __|/ _ \\ |/ _ \\ |/ /"
   echo "|   <| |_| | |_) |  __/   \\__ \\  __/ |  __/   < "
-  echo "|_|\\_\\\\__,_|_.__/ \___|   |___/\\___|_|\\___|_|\\_\\ v1.6"
+  echo "|_|\\_\\\\__,_|_.__/ \___|   |___/\\___|_|\\___|_|\\_\\ v1.7"
+  echo "https://github.com/DanielKag/scripts/blob/main/selek"
 }
 
 title=$(selek_title)
 
-export FZF_DEFAULT_OPTS='--bind esc:abort --layout reverse --ansi --separator=╸ --color=dark,separator:green,border:white --border rounded'
+if [ "$1" == "--version" ]; then
+  selek_title
+  exit 0
+fi
+
+export FZF_DEFAULT_OPTS="--bind esc:abort \
+                         --bind tab:toggle-preview \
+                         --layout reverse \
+                         --ansi --separator=╸ \
+                         --color=dark,separator:green,border:white --border rounded"
 
 # Move to config file
 export namespaces_list='tb-viewer\nsite-assets\nviewer-server\nci' 
