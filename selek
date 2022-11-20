@@ -130,8 +130,8 @@ fi
 
 if [ -z "$pod_name" ]; then
   pod_name=$(select_pod)
-  if [ -z "$namespace" ]; then
-    echo "No namespace selected"
+  if [ -z "$pod_name" ]; then
+    echo "No pod selected"
     exit 0 
   fi
 fi
