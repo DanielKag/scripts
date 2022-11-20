@@ -86,7 +86,7 @@ select_namespace() {
               --header "$header")
         
         if [[ "$choosen_namespace" == "$load_more_txt" ]]; then
-          choosen_namespace=$(kubectl get ns -o name --context $context | cut -d/ -f2 \
+          choosen_namespace=$(kubectl get ns -o name --context $context 2>&1 | cut -d/ -f2 \
               | fzf --prompt "Select namespace: " \
                     --header "$header")
         fi
