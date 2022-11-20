@@ -168,7 +168,7 @@ selek_copy() {
 
 
 menu_item() {
-  printf '%s%s%-15s%s %s%s%s' "$MAGENTA" "$BOLD" "$1" "$NORMAL" "$GRAY" "$2" "$NORMAL"
+  printf '%s%s%-15s%s %s%s%s' "$GREEN" "$BOLD" "$1" "$NORMAL" "$GRAY" "$2" "$NORMAL"
   echo
 }
 
