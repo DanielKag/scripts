@@ -48,7 +48,7 @@ if [ "$1" == "--version" ]; then
 fi
 
 export FZF_DEFAULT_OPTS="--bind esc:abort \
-                         --bind tab:toggle-preview \
+                         --bind "tab:toggle-preview" \
                          --layout reverse \
                          --ansi --separator=╸ \
                          --color=dark,separator:green,border:white --border rounded"
@@ -71,9 +71,11 @@ get_state_text() {
     text="${MAGENTA}"
     
     namespace_text="${title}Namespace:${NORMAL} ${text}$namespace${NORMAL}"
+    service_text="${title}Service:${NORMAL} ${text}$service_name${NORMAL}"
     pod_name_text="${title}Pod:${NORMAL} ${text}$pod_name${NORMAL}"
     printf "${title}Context:${NORMAL} ${text}$context${NORMAL}
 ${namespace:+$namespace_text}
+${service_name:+$service_text}
 ${pod_name:+$pod_name_text}"
 }
 
@@ -95,16 +97,30 @@ select_namespace() {
 
 }
 
+select_service() {
+  kubectl get services --all-namespaces -o wide | tr -s ' ' |  cut -d ' '  -f 1,2,8 | tail -n +2 2>&1 \
+    | fzf --header-lines 1 --reverse \
+          --with-nth=2 \
+          --prompt "Select Service: "
+}
+
 select_pod() {
+
+  # selector_filter="--selector=service=com.wixpress.html-client.wix-thunderbolt"
+  selector_filter="--selector=$selector"
+
+
+
   state_text=$(get_state_text)
-  header="<Enter> - Go to options | <Tab> - Toggle describe
+  header="<Enter> - Go to options | R - Reload | <Tab> - Toggle describe
 ${state_text}"
-  kubectl get pods -o wide -L version -n $namespace --context $context 2>&1 \
+  kubectl get pods -o wide -L version -n $namespace $selector_filter --context $context 2>&1 \
       | fzf --header-lines 1 \
       --exact \
       --prompt "Select pod: " \
       --header "$header" \
       --bind='tab:toggle-preview' \
+      --bind="R:reload(kubectl get pods -o wide -L version -n $namespace --context $context 2>&1)" \
       --preview-window down \
       --preview-window hidden \
       --preview "kubectl describe pod -n $namespace {1} --context $context"  \
@@ -123,8 +139,19 @@ fi
 if [ -z "$namespace" ]; then
   namespace=$(select_namespace)
   if [ -z "$namespace" ]; then
-    echo "No namespace selected"
-    exit 0 
+    service_result=$(select_service)
+    
+    if [ -z "$service_result" ]; then
+      echo "No service selected"
+      exit 0 
+    fi
+    
+    namespace=$(echo $service_result | cut -f1 -d' ')
+    service_name=$(echo $service_result | cut -f2 -d' ')
+    selector=$(echo $service_result | cut -f3 -d' ')
+
+    echo "selector: $selector"
+    
   fi
 fi
 
@@ -142,6 +169,11 @@ selek_ssh() {
   fi
 }
 
+selek_describe() {
+  if [ -n "$pod_name" ]; then
+    kubectl describe pod -n $namespace $pod_name --context $context | fzf --disabled
+  fi
+}
 
 selek_logs() {
   extra_args="$1"
@@ -177,6 +209,7 @@ print_commands() {
   menu_item 'logs' 'Get machine logs' 
   # menu_item 'logs-to-file' 'Get machine logs and save them in logs.txt' 
   menu_item 'previous-logs' 'logs to the previous pod' 
+  menu_item 'describe' 'Get more details about the pod' 
   menu_item 'copy' 'Copy pod name' 
 }
 
@@ -199,6 +232,9 @@ selek_run_command() {
       ;;
     previous-logs)
       selek_logs --previous
+      ;;
+    describe)
+      selek_describe
       ;;
     *)
       printf "Wrong command $command"
