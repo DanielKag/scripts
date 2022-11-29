@@ -1,4 +1,5 @@
 # !/bin/sh
+set -e
 # export context="42"
 # namespace="tb-viewer"
 # pod_name="thunderbolt-deploy-preview-amiry-884bcf599-tbpk4"
@@ -57,8 +58,12 @@ export FZF_DEFAULT_OPTS="--bind esc:abort \
 export namespaces_list='tb-viewer\nsite-assets\nviewer-server\nci' 
 
 select_context() {
+
+  header="${GRAY}<Enter> - Select context | <Space> - Use context (will be saved for next session) ${NORMAL}"
+  
   kubectl config get-contexts | sort -r 2>&1 \
     | fzf --header-lines 1 --reverse \
+          --header "$header" \
           --bind "space:execute(kubectl config use-context {1} &>/dev/null)" \
           --bind "space:+reload(kubectl config get-contexts | sort -r)" \
           --bind "space:+first" \
@@ -99,8 +104,8 @@ ${pod_name:+$pod_name_text}"
 
 get_updated_services_from_kube() {
     # on refresh:
-    result=$(kubectl get services --all-namespaces --context $context -o wide 2>&1)
-    namespaces=$(printf "$result" | tail -n +2 |  cut -w -f 1 | uniq | sed -e 's/$/ ALL/')
+    result=$(kubectl get services --all-namespaces --context $context -o wide)
+    namespaces=$(printf "$result" | tail -n +2 |  cut -w -f 1 | uniq | sed -e 's/$/ aALL/')
     services=$(printf "$result" | cut -w -f 1,2,8)
     namespaces_and_services=$(printf "$services\n$namespaces" | column -t 2>&1 |  sort -k 1)
     printf "$namespaces_and_services" 
@@ -108,22 +113,35 @@ get_updated_services_from_kube() {
 
 get_services_with_cache() {
   cache_context=$1
+  SELEK_FOLDER="$HOME/.selek"
   CACHE_FILE="services_cache${cache_context}.txt"
+  CACHE_FILE_FULL_PATH="${SELEK_FOLDER}/${CACHE_FILE}"
 
-  if [ ! -f $CACHE_FILE ]; then
-    get_updated_services_from_kube > $CACHE_FILE
+  if [ ! -d $SELEK_FOLDER ]; then
+    mkdir $SELEK_FOLDER
   fi
 
-  cat $CACHE_FILE
+
+  if [ ! -f $CACHE_FILE_FULL_PATH ]; then
+    result=$(get_updated_services_from_kube)
+    printf "$result" > $CACHE_FILE_FULL_PATH
+  fi
+
+  cat $CACHE_FILE_FULL_PATH
 }
 
 
 select_service() {
 
+  state_text=$(get_state_text)
+  header="${GRAY}<Enter> - Choose service or namespace | R - Reload${NORMAL}  
+${state_text}"
+  
   get_services_with_cache $context \
     | fzf --header-lines 1 --reverse \
           --bind='D:page-down' \
           --bind='U:page-down' \
+          --header "$header" \
           --with-nth=1,2 \
           --prompt "Select Namespace/ Service: "
 }
@@ -135,15 +153,17 @@ select_pod() {
   fi
    
   state_text=$(get_state_text)
-  header="<Enter> - Go to options | R - Reload | <Tab> - Toggle describe
+  header="${GRAY}<Enter> - Go to options | R - Reload | <Tab> - Toggle describe${NORMAL}
 ${state_text}"
-  kubectl get pods -o wide -L version -n $namespace $selector_filter --context $context 2>&1 \
+
+  get_pods_command="kubectl get pods -o wide -L version -n $namespace $selector_filter --context $context 2>&1"
+  eval $get_pods_command \
       | fzf --header-lines 1 \
       --exact \
       --prompt "Select pod: " \
       --header "$header" \
       --bind='tab:toggle-preview' \
-      --bind="R:reload(kubectl get pods -o wide -L version -n $namespace --context $context 2>&1)" \
+      --bind="R:reload(${get_pods_command})" \
       --preview-window down \
       --preview-window hidden \
       --preview "kubectl describe pod -n $namespace {1} --context $context"  \
