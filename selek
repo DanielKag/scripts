@@ -36,7 +36,7 @@ selek_title() {
   echo "| | ___   _| |__   ___     ___  ___| | ___| | __"
   echo "| |/ / | | | '_ \\ / _ \\   / __|/ _ \\ |/ _ \\ |/ /"
   echo "|   <| |_| | |_) |  __/   \\__ \\  __/ |  __/   < "
-  echo "|_|\\_\\\\__,_|_.__/ \___|   |___/\\___|_|\\___|_|\\_\\ v2.0"
+  echo "|_|\\_\\\\__,_|_.__/ \___|   |___/\\___|_|\\___|_|\\_\\ v2.1"
   echo "https://github.com/DanielKag/scripts/blob/main/selek"
 }
 
@@ -79,38 +79,61 @@ ${service_name:+$service_text}
 ${pod_name:+$pod_name_text}"
 }
 
-select_namespace() {
-    load_more_txt="Load more..."
-    header="$(get_state_text)"
+# select_namespace() {
+#     load_more_txt="Load more..."
+#     header="$(get_state_text)"
 
-    choosen_namespace=$(printf "$namespaces_list\n$load_more_txt" \
-        | fzf --prompt "Select namespace: " \
-              --header "$header")
-        
-        if [[ "$choosen_namespace" == "$load_more_txt" ]]; then
-          choosen_namespace=$(kubectl get ns -o name --context $context 2>&1 | cut -d/ -f2 \
-              | fzf --prompt "Select namespace: " \
-                    --header "$header")
-        fi
-        
-        echo "$choosen_namespace"
+#     choosen_namespace=$(printf "$namespaces_list\n$load_more_txt" \
+#         | fzf --prompt "Select namespace: " \
+#               --header "$header")
+#         
+#         if [[ "$choosen_namespace" == "$load_more_txt" ]]; then
+#           choosen_namespace=$(kubectl get ns -o name --context $context 2>&1 | cut -d/ -f2 \
+#               | fzf --prompt "Select namespace: " \
+#                     --header "$header")
+#         fi
+#         
+#         echo "$choosen_namespace"
 
+# }
+
+get_updated_services_from_kube() {
+    # on refresh:
+    result=$(kubectl get services --all-namespaces --context $context -o wide 2>&1)
+    namespaces=$(printf "$result" | tail -n +2 |  cut -w -f 1 | uniq | sed -e 's/$/ ALL/')
+    services=$(printf "$result" | cut -w -f 1,2,8)
+    namespaces_and_services=$(printf "$services\n$namespaces" | column -t 2>&1 |  sort -k 1)
+    printf "$namespaces_and_services" 
 }
 
+get_services_with_cache() {
+  cache_context=$1
+  CACHE_FILE="services_cache${cache_context}.txt"
+
+  if [ ! -f $CACHE_FILE ]; then
+    get_updated_services_from_kube > $CACHE_FILE
+  fi
+
+  cat $CACHE_FILE
+}
+
+
 select_service() {
-  kubectl get services --all-namespaces -o wide | tr -s ' ' |  cut -d ' '  -f 1,2,8 | tail -n +2 2>&1 \
+
+  get_services_with_cache $context \
     | fzf --header-lines 1 --reverse \
-          --with-nth=2 \
-          --prompt "Select Service: "
+          --bind='D:page-down' \
+          --bind='U:page-down' \
+          --with-nth=1,2 \
+          --prompt "Select Namespace/ Service: "
 }
 
 select_pod() {
 
-  # selector_filter="--selector=service=com.wixpress.html-client.wix-thunderbolt"
-  selector_filter="--selector=$selector"
-
-
-
+  if [ -n $selector ]; then
+      selector_filter="--selector=$selector"
+  fi
+   
   state_text=$(get_state_text)
   header="<Enter> - Go to options | R - Reload | <Tab> - Toggle describe
 ${state_text}"
@@ -127,6 +150,9 @@ ${state_text}"
         | cut -d\  -f 1
 }
 
+
+
+# MAIN
 if [ -z "$context" ]; then
   context=$(select_context)
 
@@ -137,22 +163,17 @@ if [ -z "$context" ]; then
 fi
 
 if [ -z "$namespace" ]; then
-  namespace=$(select_namespace)
-  if [ -z "$namespace" ]; then
-    service_result=$(select_service)
-    
-    if [ -z "$service_result" ]; then
-      echo "No service selected"
-      exit 0 
-    fi
-    
-    namespace=$(echo $service_result | cut -f1 -d' ')
-    service_name=$(echo $service_result | cut -f2 -d' ')
-    selector=$(echo $service_result | cut -f3 -d' ')
-
-    echo "selector: $selector"
-    
+  service_result=$(select_service)
+  
+  if [ -z "$service_result" ]; then
+    echo "No service selected"
+    exit 0 
   fi
+  
+  namespace=$(echo $service_result | cut -f1 -d' ')
+  service_name=$(echo $service_result | cut -f2 -d' ')
+  selector=$(echo $service_result | cut -f3 -d' ')
+  
 fi
 
 if [ -z "$pod_name" ]; then
