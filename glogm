@@ -22,26 +22,44 @@ openGithubCommitOnRemote() {
   fi
 }
 
+DARK_GRAY="${DARK_GRAY:-$(tput setaf 0)}"
+RED="${RED:-$(tput setaf 1)}"
+GREEN="${GREEN:-$(tput setaf 2)}"
+YELLOW="${YELLOW:-$(tput setaf 3)}"
+BLUE="${BLUE:-$(tput setaf 4)}"
+MAGENTA="${MAGENTA:-$(tput setaf 5)}"
+CYAN="${CYAN:-$(tput setaf 6)}"
+WHITE="${WHITE:-$(tput setaf 7)}"
+GRAY="${GRAY:-$(tput setaf 8)}"
+BOLD="${BOLD:-$(tput bold)}"
+UNDERLINE="${UNDERLINE:-$(tput sgr 0 1)}"
+INVERT="${INVERT:-$(tput sgr 1 0)}"
+NORMAL="${NORMAL:-$(tput sgr0)}"
 
 
 base_branch=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
 remote_base_branch="origin/$base_branch"
 
-
-branch_to_check=$(printf "HEAD\n$remote_base_branch" | fzf)
-
-command="git log $branch_to_check \
+command_head="git log HEAD \
             --decorate-refs-exclude=refs/tags --abbrev-commit \
             --pretty=format:'%Cred%h%Creset %Cgreen%<(13)%cr%Creset %C(bold blue)%<(16)%an%Creset %s %C(auto)%d%Creset'"
 
-header=$'Git log in branch: $branch_to_check\n<Tab> - Toggle commit details\n<Enter> - See commit in github\n<Ctrl-r> - Refresh'
+command_master="git log $remote_base_branch \
+            --decorate-refs-exclude=refs/tags --abbrev-commit \
+            --pretty=format:'%Cred%h%Creset %Cgreen%<(13)%cr%Creset %C(bold blue)%<(16)%an%Creset %s %C(auto)%d%Creset'"
 
-eval "$command" \
+header=$(printf "Git log in branch: ${branch_to_check}\n<Tab>    Toggle commit diff\n<Enter>  See commit in github\n<Ctrl-r> Refresh\n← →      Choose branch")
+head_prompt="${INVERT}HEAD${NORMAL} ${remote_base_branch}"
+base_prompt="HEAD ${INVERT}${remote_base_branch}${NORMAL}"
+eval "echo '$head_prompt'; $command_head" \
   | fzf --ansi --no-sort --exact \
        --header "$header" \
+       --header-lines=1 \
        --reverse \
        --bind='tab:toggle-preview' \
-       --bind "ctrl-r:+reload(git fetch && $command)" \
+       --bind "ctrl-r:reload(git fetch && echo '$base_prompt'; $command_master)" \
+       --bind "left:reload(echo '$head_prompt'; $command_head)" \
+       --bind "right:reload(echo '$base_prompt'; $command_master)" \
        --preview-window down \
        --preview-window hidden \
        --preview 'git show {1} | delta' \
