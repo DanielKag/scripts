@@ -37,7 +37,7 @@ selek_title() {
   echo "| | ___   _| |__   ___     ___  ___| | ___| | __"
   echo "| |/ / | | | '_ \\ / _ \\   / __|/ _ \\ |/ _ \\ |/ /"
   echo "|   <| |_| | |_) |  __/   \\__ \\  __/ |  __/   < "
-  echo "|_|\\_\\\\__,_|_.__/ \___|   |___/\\___|_|\\___|_|\\_\\ v2.4"
+  echo "|_|\\_\\\\__,_|_.__/ \___|   |___/\\___|_|\\___|_|\\_\\ v2.5"
   echo "https://github.com/DanielKag/scripts/blob/main/selek"
 }
 
@@ -175,25 +175,21 @@ ${state_text}"
         | cut -d\  -f 1
 }
 
-confirm() {
+# confirm() {
 
-  msg=$1
-  choices="Yes\nNo"
+#   msg=$1
+#   choices="Yes\nNo"
 
-  header="${GRAY}F - First | L - Last | <Enter> - Copy | <Tab> - Select | A - Select all${NORMAL}
-$(get_state_text)"
-  
-  result=$(printf "$msg\n$choices" \
-      | fzf --header-lines 1 \
-            --header "$header")
-  echo $result >> daniel.txt
+#   header="${GRAY}F - First | L - Last | <Enter> - Copy | <Tab> - Select | A - Select all${NORMAL}
+# $(get_state_text)"
+#   
+#   result=$(printf "$msg\n$choices" \
+#       | fzf --header-lines 1 \
+#             --header "$header")
 
-  if [ "$result" = "Yes" ]; then
-    echo inside >> daniel.txt
-    echo $result
-    echo $result >> daniel.txt
-  fi
-}
+#   if [ "$result" = "Yes" ]; then
+#   fi
+# }
 
 
 selek_ssh() {
@@ -335,8 +331,6 @@ main() {
   export stay_in_selek=true
   while [ $stay_in_selek = true ]
   do
-    echo stay_in_selek >> daniel.txt
-    echo $stay_in_selek >> daniel.txt
     if [ -n "$pod_name" ]; then
           command=$(print_commands| fzf_commands)
 
