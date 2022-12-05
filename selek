@@ -37,7 +37,7 @@ selek_title() {
   echo "| | ___   _| |__   ___     ___  ___| | ___| | __"
   echo "| |/ / | | | '_ \\ / _ \\   / __|/ _ \\ |/ _ \\ |/ /"
   echo "|   <| |_| | |_) |  __/   \\__ \\  __/ |  __/   < "
-  echo "|_|\\_\\\\__,_|_.__/ \___|   |___/\\___|_|\\___|_|\\_\\ v2.2"
+  echo "|_|\\_\\\\__,_|_.__/ \___|   |___/\\___|_|\\___|_|\\_\\ v2.3"
   echo "https://github.com/DanielKag/scripts/blob/main/selek"
 }
 
@@ -170,39 +170,26 @@ ${state_text}"
         | cut -d\  -f 1
 }
 
+confirm() {
 
+  msg=$1
+  choices="Yes\nNo"
 
-# MAIN
-if [ -z "$context" ]; then
-  context=$(select_context)
-
-  if [ -z "$context" ]; then
-    echo "No context selected"
-    exit 0
-  fi
-fi
-
-if [ -z "$namespace" ]; then
-  service_result=$(select_service)
+  header="${GRAY}F - First | L - Last | <Enter> - Copy | <Tab> - Select | A - Select all${NORMAL}
+$(get_state_text)"
   
-  if [ -z "$service_result" ]; then
-    echo "No service selected"
-    exit 0 
-  fi
-  
-  namespace=$(echo $service_result | cut -f1 -d' ')
-  service_name=$(echo $service_result | cut -f2 -d' ')
-  selector=$(echo $service_result | cut -f3 -d' ')
-  
-fi
+  result=$(printf "$msg\n$choices" \
+      | fzf --header-lines 1 \
+            --header "$header")
+  echo $result >> daniel.txt
 
-if [ -z "$pod_name" ]; then
-  pod_name=$(select_pod)
-  if [ -z "$pod_name" ]; then
-    echo "No pod selected"
-    exit 0 
+  if [ "$result" = "Yes" ]; then
+    echo inside >> daniel.txt
+    echo $result
+    echo $result >> daniel.txt
   fi
-fi
+}
+
 
 selek_ssh() {
   if [ -n "$pod_name" ]; then
@@ -212,7 +199,7 @@ selek_ssh() {
 
 selek_describe() {
   if [ -n "$pod_name" ]; then
-    kubectl describe pod -n $namespace $pod_name --context $context | fzf --disabled
+    kubectl describe pod -n $namespace $pod_name --context $context | fzf --exact | echo dummy > /dev/null
   fi
 }
 
@@ -225,6 +212,7 @@ selek_logs() {
 
   header="${GRAY}F - First | L - Last | <Enter> - Copy | <Tab> - Select | A - Select all${NORMAL}
 $(get_state_text)"
+
   eval $kube_logs_command  2>&1 \
       | sed 's/%/$/g' \
       | fzf --bind 'L:last',F:first,A:select-all \
@@ -232,7 +220,14 @@ $(get_state_text)"
             --exact \
             --multi \
             --preview "$preview_command" \
-            --header "$header" 
+            --header "$header" \
+     | echo dummy > /dev/null
+}
+
+
+selek_delete() {
+  delete_pod_command="kubectl delete pod -n $namespace $pod_name --context $context"
+  printf "$delete_pod_command" | pbcopy
 }
 
 selek_copy() {
@@ -248,22 +243,32 @@ menu_item() {
 print_commands() {
   menu_item 'ssh' 'SSH to the machine' 
   menu_item 'logs' 'Get machine logs' 
-  # menu_item 'logs-to-file' 'Get machine logs and save them in logs.txt' 
   menu_item 'previous-logs' 'logs to the previous pod' 
   menu_item 'describe' 'Get more details about the pod' 
   menu_item 'copy' 'Copy pod name' 
+  menu_item 'delete' 'Copy delete command' 
+  menu_item 'back' 'Choose a different pod' 
 }
 
 selek_run_command() {
   command=$1
 
   case $command in
+    back)
+      pod_name=$(select_pod)
+      if [ -z $pod_name ]; then
+        stay_in_selek=false
+      fi
+      ;;
     ssh)
       selek_ssh
       stay_in_selek=false
       ;;
     copy)
       selek_copy $pod_name
+      ;;
+    delete)
+      selek_delete
       ;;
     logs)
       selek_logs
@@ -289,16 +294,54 @@ fzf_commands() {
   fzf --ansi --exact --header "$commands_header" 
 }
 
-export stay_in_selek=true
-while [ $stay_in_selek = true ]
-do
-  if [ -n "$pod_name" ]; then
-        command=$(print_commands| fzf_commands)
+main() {
+  if [ -z "$context" ]; then
+    context=$(select_context)
 
-        if [ -z "$command" ]; then
-          exit 0
-        fi
-
-        selek_run_command $command 
+    if [ -z "$context" ]; then
+      echo "No context selected"
+      exit 0
+    fi
   fi
-done
+
+  if [ -z "$namespace" ]; then
+    service_result=$(select_service)
+    
+    if [ -z "$service_result" ]; then
+      echo "No service selected"
+      exit 0 
+    fi
+    
+    namespace=$(echo $service_result | cut -f1 -d' ')
+    service_name=$(echo $service_result | cut -f2 -d' ')
+    selector=$(echo $service_result | cut -f3 -d' ')
+    
+  fi
+
+  if [ -z "$pod_name" ]; then
+    pod_name=$(select_pod)
+    if [ -z "$pod_name" ]; then
+      echo "No pod selected"
+      exit 0 
+    fi
+  fi
+
+
+  export stay_in_selek=true
+  while [ $stay_in_selek = true ]
+  do
+    echo stay_in_selek >> daniel.txt
+    echo $stay_in_selek >> daniel.txt
+    if [ -n "$pod_name" ]; then
+          command=$(print_commands| fzf_commands)
+
+          if [ -z "$command" ]; then
+            exit 0
+          fi
+
+          selek_run_command $command 
+    fi
+  done
+}
+
+main
