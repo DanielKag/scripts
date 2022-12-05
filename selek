@@ -37,7 +37,7 @@ selek_title() {
   echo "| | ___   _| |__   ___     ___  ___| | ___| | __"
   echo "| |/ / | | | '_ \\ / _ \\   / __|/ _ \\ |/ _ \\ |/ /"
   echo "|   <| |_| | |_) |  __/   \\__ \\  __/ |  __/   < "
-  echo "|_|\\_\\\\__,_|_.__/ \___|   |___/\\___|_|\\___|_|\\_\\ v2.3"
+  echo "|_|\\_\\\\__,_|_.__/ \___|   |___/\\___|_|\\___|_|\\_\\ v2.4"
   echo "https://github.com/DanielKag/scripts/blob/main/selek"
 }
 
@@ -153,16 +153,21 @@ select_pod() {
   fi
    
   state_text=$(get_state_text)
-  header="${GRAY}<Enter> - Go to options | R - Reload | <Tab> - Toggle describe${NORMAL}
+  header="${GRAY}<Enter> - Go to options | R - Reload | D - Delete Pod | <Tab> - Toggle describe${NORMAL}
 ${state_text}"
 
   get_pods_command="kubectl get pods -o wide -L version -n $namespace $selector_filter --context $context 2>&1"
+  delete_pod_command="kubectl delete pod --wait=false -n $namespace {1} --context $context"
+  # delete_pod_and_reload="${delete_pod_command} & ${get_pods_command}"
+  delete_pod_and_reload="kubectl get pods -o wide -L version -n $namespace $selector_filter --context $context 2>&1 & kubectl delete pod -n $namespace {1} --context $context"
   eval $get_pods_command \
       | fzf --header-lines 1 \
       --exact \
       --prompt "Select pod: " \
       --header "$header" \
       --bind='tab:toggle-preview' \
+      --bind="D:execute(${delete_pod_command})" \
+      --bind="D:+reload(${get_pods_command})" \
       --bind="R:reload(${get_pods_command})" \
       --preview-window down \
       --preview-window hidden \
