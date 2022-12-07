@@ -211,13 +211,14 @@ selek_logs() {
   # header=''"'${GRAY}F - First | L - Last | <Tab> - Select | A - Select all\n $kube_logs_command'
   preview_command="printf {} | jq -C 2> /dev/null || echo {} | fold -s"
 
-  header="${GRAY}F - First | L - Last | <Enter> - Copy | <Tab> - Select | A - Select all${NORMAL}
+  header="${GRAY}F - First | L - Last | <Enter> - Copy message | C - Copy kube command | <Tab> - Toggle preview ${NORMAL}
 $(get_state_text)"
 
   eval $kube_logs_command  2>&1 \
       | sed 's/%/$/g' \
       | fzf --bind 'L:last',F:first,A:select-all \
             --bind "enter:execute(printf {} | pbcopy)" \
+            --bind "C:execute(printf '$kube_logs_command' | pbcopy)" \
             --exact \
             --multi \
             --preview "$preview_command" \
