@@ -1,7 +1,7 @@
 # !/usr/bin/env bash
 
 if [ "$1" == "--version" ]; then
-  echo "glogm version 1.4"
+  echo "glogm version 1.5"
   echo "https://github.com/DanielKag/scripts/blob/main/glogm"
   exit 0
 fi
@@ -53,7 +53,7 @@ command_master="git -c color.ui=always log $remote_base_branch \
 
 header=$(printf "<Tab>    Toggle commit diff\n<Enter>  See commit in github\n<R> Refresh\n← →      Choose branch")
 head_prompt="${INVERT}${current_branch} (HEAD) ${NORMAL} ${remote_base_branch}"
-base_prompt="HEAD (${current_branch}) ${INVERT}${remote_base_branch}${NORMAL}"
+base_prompt="${current_branch} (HEAD) ${INVERT}${remote_base_branch}${NORMAL}"
 eval "echo '$head_prompt'; $command_head" \
   | fzf --ansi --no-sort --exact \
        --header "$header" \
